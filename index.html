@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kavoosi</title>
+  <title>Color Detector</title>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
     video, canvas { display: block; margin: 0 auto; }
@@ -20,7 +20,7 @@
     const ctx = canvas.getContext('2d');
     const audioRed = new Audio('digital.mp3');
     const audioYellow = new Audio('digital.mp3');
-    const audioBlack = new Audio('digital.mp3');
+    const audioGreen = new Audio('digital.mp3');
 
     let lastTriggerTime = 0;
     const cooldown = 2000; // 2 seconds
@@ -38,18 +38,16 @@
 
       let redCount = 0;
       let yellowCount = 0;
-      let blackCount = 0;
+      let greenCount = 0;
 
       for (let i = 0; i < frame.data.length; i += 4) {
         const r = frame.data[i];
         const g = frame.data[i + 1];
         const b = frame.data[i + 2];
 
-        const brightness = (r + g + b) / 3;
-
         if (r > 150 && g < 100 && b < 100) redCount++;
         if (r > 150 && g > 150 && b < 100) yellowCount++;
-        if (brightness < 50) blackCount++;
+        if (g > 150 && r < 100 && b < 100) greenCount++;
       }
 
       const totalPixels = frame.data.length / 4;
@@ -64,9 +62,9 @@
           console.log('Yellow detected');
           audioYellow.play();
           lastTriggerTime = now;
-        } else if (blackCount / totalPixels > 0.25) {
-          console.log('Black detected');
-          audioBlack.play();
+        } else if (greenCount / totalPixels > 0.25) {
+          console.log('Green detected');
+          audioGreen.play();
           lastTriggerTime = now;
         }
       }
