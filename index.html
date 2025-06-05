@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Kavoosi khale</title>
+  <title>Kavoosi</title>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
     video, canvas { display: block; margin: 0 auto; }
@@ -29,11 +29,11 @@
 
     const frameBuffer = [];
     const maxFrames = 10;
-    let lastTriggerTime = 0;
-    const cooldown = 2000;
     const motionThreshold = 30;
     const motionRatioThreshold = 0.05;
+    const cooldown = 2000;
     let startTime = Date.now();
+    let motionHandled = false;
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
@@ -61,6 +61,8 @@
     }
 
     function detectMotion() {
+      if (motionHandled) return; // Stop checking once motion has been handled
+
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const currentFrame = ctx.getImageData(80, 60, 160, 120);
 
@@ -71,7 +73,6 @@
 
       const now = Date.now();
 
-      // Wait until buffer is full and 3 seconds have passed since page load
       if (frameBuffer.length < maxFrames || (now - startTime) < 3000) {
         requestAnimationFrame(detectMotion);
         return;
@@ -98,10 +99,11 @@
 
       const totalPixels = currentFrame.data.length / 4;
 
-      if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
+      if ((motionPixels / totalPixels) > motionRatioThreshold) {
         console.log('Motion detected');
         playRandomSound();
-        lastTriggerTime = now;
+        motionHandled = true;
+        return;
       }
 
       requestAnimationFrame(detectMotion);
