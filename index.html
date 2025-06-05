@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Color Detector</title>
+  <title>Motion Detector</title>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
     video, canvas { display: block; margin: 0 auto; }
@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <h1>Color Detector</h1>
+  <h1>Bobblehead Motion Detector</h1>
   <video id="video" width="320" height="240" autoplay muted playsinline></video>
   <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
   <p>Hit Kavoosi in the head!</p>
@@ -18,58 +18,56 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const audioRed = new Audio('digital.mp3');
-    const audioYellow = new Audio('digital.mp3');
-    const audioGreen = new Audio('digital.mp3');
+    const audio = new Audio('digital.mp3');
 
+    let lastFrame = null;
     let lastTriggerTime = 0;
     const cooldown = 2000; // 2 seconds
+    const motionThreshold = 30; // pixel brightness difference
+    const motionRatioThreshold = 0.05; // 5% of center pixels
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
-      requestAnimationFrame(detectColor);
+      requestAnimationFrame(detectMotion);
     }).catch(err => {
       console.error('Camera access error:', err);
     });
 
-    function detectColor() {
+    function detectMotion() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const frame = ctx.getImageData(80, 60, 160, 120); // center region only
 
-      let redCount = 0;
-      let yellowCount = 0;
-      let greenCount = 0;
+      if (lastFrame) {
+        let motionPixels = 0;
 
-      for (let i = 0; i < frame.data.length; i += 4) {
-        const r = frame.data[i];
-        const g = frame.data[i + 1];
-        const b = frame.data[i + 2];
+        for (let i = 0; i < frame.data.length; i += 4) {
+          const r = frame.data[i];
+          const g = frame.data[i + 1];
+          const b = frame.data[i + 2];
+          const brightness = (r + g + b) / 3;
 
-        if (r > 150 && g < 100 && b < 100) redCount++;
-        if (r > 150 && g > 150 && b < 100) yellowCount++;
-        if (g > 150 && r < 100 && b < 100) greenCount++;
-      }
+          const lr = lastFrame.data[i];
+          const lg = lastFrame.data[i + 1];
+          const lb = lastFrame.data[i + 2];
+          const lastBrightness = (lr + lg + lb) / 3;
 
-      const totalPixels = frame.data.length / 4;
-      const now = Date.now();
+          if (Math.abs(brightness - lastBrightness) > motionThreshold) {
+            motionPixels++;
+          }
+        }
 
-      if (now - lastTriggerTime > cooldown) {
-        if (redCount / totalPixels > 0.25) {
-          console.log('Red detected');
-          audioRed.play();
-          lastTriggerTime = now;
-        } else if (yellowCount / totalPixels > 0.25) {
-          console.log('Yellow detected');
-          audioYellow.play();
-          lastTriggerTime = now;
-        } else if (greenCount / totalPixels > 0.25) {
-          console.log('Green detected');
-          audioGreen.play();
+        const totalPixels = frame.data.length / 4;
+        const now = Date.now();
+
+        if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
+          console.log('Motion detected');
+          audio.play();
           lastTriggerTime = now;
         }
       }
 
-      requestAnimationFrame(detectColor);
+      lastFrame = frame;
+      requestAnimationFrame(detectMotion);
     }
   </script>
 </body>
