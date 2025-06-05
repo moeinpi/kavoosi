@@ -22,6 +22,9 @@
     const audioYellow = new Audio('digital.mp3');
     const audioBlack = new Audio('digital.mp3');
 
+    let lastTriggerTime = 0;
+    const cooldown = 2000; // 2 seconds
+
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
       requestAnimationFrame(detectColor);
@@ -31,7 +34,7 @@
 
     function detectColor() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const frame = ctx.getImageData(80, 60, 160, 120); // center region only
 
       let redCount = 0;
       let yellowCount = 0;
@@ -50,16 +53,22 @@
       }
 
       const totalPixels = frame.data.length / 4;
+      const now = Date.now();
 
-      if (redCount / totalPixels > 0.5) {
-        console.log('Red detected');
-        audioRed.play();
-      } else if (yellowCount / totalPixels > 0.5) {
-        console.log('Yellow detected');
-        audioYellow.play();
-      } else if (blackCount / totalPixels > 0.5) {
-        console.log('Black detected');
-        audioBlack.play();
+      if (now - lastTriggerTime > cooldown) {
+        if (redCount / totalPixels > 0.25) {
+          console.log('Red detected');
+          audioRed.play();
+          lastTriggerTime = now;
+        } else if (yellowCount / totalPixels > 0.25) {
+          console.log('Yellow detected');
+          audioYellow.play();
+          lastTriggerTime = now;
+        } else if (blackCount / totalPixels > 0.25) {
+          console.log('Black detected');
+          audioBlack.play();
+          lastTriggerTime = now;
+        }
       }
 
       requestAnimationFrame(detectColor);
