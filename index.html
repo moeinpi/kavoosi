@@ -51,13 +51,13 @@
 
       const totalPixels = frame.data.length / 4;
 
-      if (redCount / totalPixels > 0.1) {
+      if (redCount / totalPixels > 0.5) {
         console.log('Red detected');
         audioRed.play();
-      } else if (yellowCount / totalPixels > 0.1) {
+      } else if (yellowCount / totalPixels > 0.5) {
         console.log('Yellow detected');
         audioYellow.play();
-      } else if (blackCount / totalPixels > 0.1) {
+      } else if (blackCount / totalPixels > 0.5) {
         console.log('Black detected');
         audioBlack.play();
       }
