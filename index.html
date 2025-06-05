@@ -26,6 +26,7 @@
     const cooldown = 2000;
     const motionThreshold = 30;
     const motionRatioThreshold = 0.05;
+    let startTime = Date.now();
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
@@ -55,9 +56,12 @@
         frameBuffer.shift();
       }
 
-      if (frameBuffer.length < maxFrames) {
+      const now = Date.now();
+
+      // Wait until buffer is full and 3 seconds have passed since page load
+      if (frameBuffer.length < maxFrames || (now - startTime) < 3000) {
         requestAnimationFrame(detectMotion);
-        return; // Wait until buffer is full
+        return;
       }
 
       const avgFrame = averageFrames(frameBuffer);
@@ -80,7 +84,6 @@
       }
 
       const totalPixels = currentFrame.data.length / 4;
-      const now = Date.now();
 
       if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
         console.log('Motion detected');
