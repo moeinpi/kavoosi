@@ -21,9 +21,11 @@
     let lastFrame = null;
     const audio = new Audio('digital.mp3'); // Your local MP3 file in the same repo
 
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
       requestAnimationFrame(detectMotion);
+    }).catch(err => {
+      console.error('Camera access error:', err);
     });
 
     function detectMotion() {
