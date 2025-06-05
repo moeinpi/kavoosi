@@ -48,7 +48,7 @@
           diff += Math.abs(gray - gray2);
         }
 
-        if (diff > 1500000) { // threshold depends on lighting and size
+        if (diff > 5000000) { // increased threshold to reduce sensitivity
           console.log('Motion detected');
           audio.play();
         }
