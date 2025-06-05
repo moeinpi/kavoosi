@@ -24,8 +24,8 @@
     const maxFrames = 10;
     let lastTriggerTime = 0;
     const cooldown = 2000;
-    const motionThreshold = 60;
-    const motionRatioThreshold = 0.5;
+    const motionThreshold = 30;
+    const motionRatioThreshold = 0.05;
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
@@ -55,34 +55,37 @@
         frameBuffer.shift();
       }
 
-      if (frameBuffer.length === maxFrames) {
-        const avgFrame = averageFrames(frameBuffer);
-        let motionPixels = 0;
+      if (frameBuffer.length < maxFrames) {
+        requestAnimationFrame(detectMotion);
+        return; // Wait until buffer is full
+      }
 
-        for (let i = 0; i < currentFrame.data.length; i += 4) {
-          const r = currentFrame.data[i];
-          const g = currentFrame.data[i + 1];
-          const b = currentFrame.data[i + 2];
-          const brightness = (r + g + b) / 3;
+      const avgFrame = averageFrames(frameBuffer);
+      let motionPixels = 0;
 
-          const ar = avgFrame.data[i];
-          const ag = avgFrame.data[i + 1];
-          const ab = avgFrame.data[i + 2];
-          const avgBrightness = (ar + ag + ab) / 3;
+      for (let i = 0; i < currentFrame.data.length; i += 4) {
+        const r = currentFrame.data[i];
+        const g = currentFrame.data[i + 1];
+        const b = currentFrame.data[i + 2];
+        const brightness = (r + g + b) / 3;
 
-          if (Math.abs(brightness - avgBrightness) > motionThreshold) {
-            motionPixels++;
-          }
+        const ar = avgFrame.data[i];
+        const ag = avgFrame.data[i + 1];
+        const ab = avgFrame.data[i + 2];
+        const avgBrightness = (ar + ag + ab) / 3;
+
+        if (Math.abs(brightness - avgBrightness) > motionThreshold) {
+          motionPixels++;
         }
+      }
 
-        const totalPixels = currentFrame.data.length / 4;
-        const now = Date.now();
+      const totalPixels = currentFrame.data.length / 4;
+      const now = Date.now();
 
-        if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
-          console.log('Motion detected');
-          audio.play();
-          lastTriggerTime = now;
-        }
+      if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
+        console.log('Motion detected');
+        audio.play();
+        lastTriggerTime = now;
       }
 
       requestAnimationFrame(detectMotion);
