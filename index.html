@@ -24,7 +24,7 @@
     let lastTriggerTime = 0;
     const cooldown = 2000; // 2 seconds
     const motionThreshold = 30; // pixel brightness difference
-    const motionRatioThreshold = 0.05; // 5% of center pixels
+    const motionRatioThreshold = 0.5; // 5% of center pixels
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
