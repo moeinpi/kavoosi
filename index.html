@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Motion Detector</title>
+  <title>Kavoosi</title>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
     video, canvas { display: block; margin: 0 auto; }
@@ -9,7 +9,7 @@
   </style>
 </head>
 <body>
-  <h1>Bobblehead Motion Detector</h1>
+  <h1>Kavoosi</h1>
   <video id="video" width="320" height="240" autoplay muted playsinline></video>
   <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
   <p>Hit Kavoosi in the head!</p>
@@ -18,7 +18,14 @@
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const audio = new Audio('digital.mp3');
+
+    const soundFiles = [
+      'sound1.mp3',
+      'sound2.mp3',
+      'sound3.mp3',
+      'sound4.mp3',
+      'sound5.mp3'
+    ];
 
     const frameBuffer = [];
     const maxFrames = 10;
@@ -45,6 +52,12 @@
         avg[i] = sum / frames.length;
       }
       return new ImageData(avg, frames[0].width, frames[0].height);
+    }
+
+    function playRandomSound() {
+      const randomIndex = Math.floor(Math.random() * soundFiles.length);
+      const audio = new Audio(soundFiles[randomIndex]);
+      audio.play();
     }
 
     function detectMotion() {
@@ -87,7 +100,7 @@
 
       if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
         console.log('Motion detected');
-        audio.play();
+        playRandomSound();
         lastTriggerTime = now;
       }
 
