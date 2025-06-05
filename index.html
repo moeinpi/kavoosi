@@ -20,11 +20,12 @@
     const ctx = canvas.getContext('2d');
     const audio = new Audio('digital.mp3');
 
-    let lastFrame = null;
+    const frameBuffer = [];
+    const maxFrames = 10;
     let lastTriggerTime = 0;
-    const cooldown = 2000; // 2 seconds
-    const motionThreshold = 60; // pixel brightness difference
-    const motionRatioThreshold = 0.5; // 5% of center pixels
+    const cooldown = 2000;
+    const motionThreshold = 60;
+    const motionRatioThreshold = 0.5;
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
@@ -33,30 +34,48 @@
       console.error('Camera access error:', err);
     });
 
+    function averageFrames(frames) {
+      const avg = new Uint8ClampedArray(frames[0].data.length);
+      for (let i = 0; i < frames[0].data.length; i++) {
+        let sum = 0;
+        for (let f = 0; f < frames.length; f++) {
+          sum += frames[f].data[i];
+        }
+        avg[i] = sum / frames.length;
+      }
+      return new ImageData(avg, frames[0].width, frames[0].height);
+    }
+
     function detectMotion() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const frame = ctx.getImageData(80, 60, 160, 120); // center region only
+      const currentFrame = ctx.getImageData(80, 60, 160, 120);
 
-      if (lastFrame) {
+      frameBuffer.push(currentFrame);
+      if (frameBuffer.length > maxFrames) {
+        frameBuffer.shift();
+      }
+
+      if (frameBuffer.length === maxFrames) {
+        const avgFrame = averageFrames(frameBuffer);
         let motionPixels = 0;
 
-        for (let i = 0; i < frame.data.length; i += 4) {
-          const r = frame.data[i];
-          const g = frame.data[i + 1];
-          const b = frame.data[i + 2];
+        for (let i = 0; i < currentFrame.data.length; i += 4) {
+          const r = currentFrame.data[i];
+          const g = currentFrame.data[i + 1];
+          const b = currentFrame.data[i + 2];
           const brightness = (r + g + b) / 3;
 
-          const lr = lastFrame.data[i];
-          const lg = lastFrame.data[i + 1];
-          const lb = lastFrame.data[i + 2];
-          const lastBrightness = (lr + lg + lb) / 3;
+          const ar = avgFrame.data[i];
+          const ag = avgFrame.data[i + 1];
+          const ab = avgFrame.data[i + 2];
+          const avgBrightness = (ar + ag + ab) / 3;
 
-          if (Math.abs(brightness - lastBrightness) > motionThreshold) {
+          if (Math.abs(brightness - avgBrightness) > motionThreshold) {
             motionPixels++;
           }
         }
 
-        const totalPixels = frame.data.length / 4;
+        const totalPixels = currentFrame.data.length / 4;
         const now = Date.now();
 
         if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
@@ -66,7 +85,6 @@
         }
       }
 
-      lastFrame = frame;
       requestAnimationFrame(detectMotion);
     }
   </script>
