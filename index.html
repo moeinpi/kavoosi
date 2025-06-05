@@ -19,7 +19,7 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let lastFrame = null;
-    const audio = new Audio('digital.mp3');
+    const audio = new Audio('digital.mp3'); // Your local MP3 file in the same repo
 
     navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
       video.srcObject = stream;
