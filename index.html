@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Bobblehead Motion Detector</title>
+  <title>Motion Detector</title>
   <style>
     body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
     video, canvas { display: block; margin: 0 auto; }
@@ -12,47 +12,61 @@
   <h1>Bobblehead Motion Detector</h1>
   <video id="video" width="320" height="240" autoplay muted playsinline></video>
   <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
-  <p>Move the bobblehead to trigger a sound!</p>
+  <p>Hit Kavoosi in the head!</p>
 
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    let lastFrame = null;
-    const audio = new Audio('digital.mp3'); // Your local MP3 file in the same repo
+    const audio = new Audio('digital.mp3');
 
-    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+    let lastFrame = null;
+    let lastTriggerTime = 0;
+    const cooldown = 2000; // 2 seconds
+    const motionThreshold = 60; // pixel brightness difference
+    const motionRatioThreshold = 0.5; // 5% of center pixels
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: 'environment' } } }).then(stream => {
       video.srcObject = stream;
       requestAnimationFrame(detectMotion);
+    }).catch(err => {
+      console.error('Camera access error:', err);
     });
 
     function detectMotion() {
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const frame = ctx.getImageData(80, 60, 160, 120); // center region only
 
       if (lastFrame) {
-        let diff = 0;
-        for (let i = 0; i < currentFrame.data.length; i += 4) {
-          const r = currentFrame.data[i];
-          const g = currentFrame.data[i + 1];
-          const b = currentFrame.data[i + 2];
-          const gray = (r + g + b) / 3;
+        let motionPixels = 0;
 
-          const r2 = lastFrame.data[i];
-          const g2 = lastFrame.data[i + 1];
-          const b2 = lastFrame.data[i + 2];
-          const gray2 = (r2 + g2 + b2) / 3;
+        for (let i = 0; i < frame.data.length; i += 4) {
+          const r = frame.data[i];
+          const g = frame.data[i + 1];
+          const b = frame.data[i + 2];
+          const brightness = (r + g + b) / 3;
 
-          diff += Math.abs(gray - gray2);
+          const lr = lastFrame.data[i];
+          const lg = lastFrame.data[i + 1];
+          const lb = lastFrame.data[i + 2];
+          const lastBrightness = (lr + lg + lb) / 3;
+
+          if (Math.abs(brightness - lastBrightness) > motionThreshold) {
+            motionPixels++;
+          }
         }
 
-        if (diff > 1500000) { // threshold depends on lighting and size
+        const totalPixels = frame.data.length / 4;
+        const now = Date.now();
+
+        if ((motionPixels / totalPixels) > motionRatioThreshold && (now - lastTriggerTime > cooldown)) {
           console.log('Motion detected');
           audio.play();
+          lastTriggerTime = now;
         }
       }
 
-      lastFrame = currentFrame;
+      lastFrame = frame;
       requestAnimationFrame(detectMotion);
     }
   </script>
