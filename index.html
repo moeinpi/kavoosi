@@ -73,7 +73,7 @@
 
       const now = Date.now();
 
-      if (frameBuffer.length < maxFrames || (now - startTime) < 3000) {
+      if (frameBuffer.length < maxFrames || (now - startTime) < 1000) {
         requestAnimationFrame(detectMotion);
         return;
       }
