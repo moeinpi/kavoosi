@@ -1,102 +1,59 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bobblehead Sound</title>
-  <!--
-    Bobblehead Web‑Bluetooth App
-    ---------------------------------
-    * Firmware must advertise a custom BLE service with UUID SERVICE_UUID
-      and a characteristic with UUID CHAR_UUID that sends a single byte
-      value 0x01 every time the switch toggles.
-    * Tested on Chrome 125+ for Android and Desktop (Web Bluetooth).
-    * iOS Safari does not yet support Web Bluetooth; use a native wrapper
-      or alternative if you need iOS support.
-    * Place a short sound file called "sound.mp3" in the same folder as
-      this file or update the <audio> src attribute below.
-  -->
+  <title>Bobblehead Motion Detector</title>
   <style>
-    body {
-      @apply flex flex-col items-center justify-center min-h-screen bg-gray-50 text-gray-800 p-6 space-y-6;
-    }
-    .btn {
-      @apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-2xl shadow-xl transition;
-    }
-    .status {
-      @apply text-center text-base;
-    }
+    body { font-family: sans-serif; text-align: center; background: #f0f0f0; }
+    video, canvas { display: block; margin: 0 auto; }
+    h1 { margin-top: 20px; }
   </style>
-  <!-- Tailwind via CDN for quick styling -->
-  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-  <h1 class="text-2xl font-bold">Bobblehead Sound</h1>
-
-  <button id="connectBtn" class="btn">
-    Connect Bobblehead
-  </button>
-
-  <p id="status" class="status">Not connected</p>
-
-  <!-- Preload your sound file; replace 'sound.mp3' if needed -->
-  <audio id="bobbleSound" src="digital.mp3" preload="auto"></audio>
+  <h1>Bobblehead Motion Detector</h1>
+  <video id="video" width="320" height="240" autoplay muted playsinline></video>
+  <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+  <p>Move the bobblehead to trigger a sound!</p>
 
   <script>
-    // === Customise these UUIDs to match your Nordic firmware ===
-    const SERVICE_UUID = '0000a000-0000-1000-8000-00805f9b34fb';
-    const CHAR_UUID    = '0000a001-0000-1000-8000-00805f9b34fb';
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let lastFrame = null;
+    const audio = new Audio('digital.mp3');
 
-    // === DOM references ===
-    const connectBtn = document.getElementById('connectBtn');
-    const statusEl   = document.getElementById('status');
-    const soundEl    = document.getElementById('bobbleSound');
-
-    let characteristic;
-
-    connectBtn.addEventListener('click', async () => {
-      try {
-        updateStatus('Requesting device …');
-        // User selects the device advertising SERVICE_UUID
-        const device = await navigator.bluetooth.requestDevice({
-          filters: [{ services: [SERVICE_UUID] }]
-        });
-
-        updateStatus('Connecting …');
-        const server   = await device.gatt.connect();
-        const service  = await server.getPrimaryService(SERVICE_UUID);
-        characteristic = await service.getCharacteristic(CHAR_UUID);
-
-        await characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', onMovement);
-
-        device.addEventListener('gattserverdisconnected', () => {
-          connectBtn.disabled = false;
-          updateStatus('Disconnected — tap Connect to retry.');
-        });
-
-        connectBtn.disabled = true;
-        updateStatus('Connected! Bobble the head to play the sound.');
-      } catch (err) {
-        console.error(err);
-        updateStatus(err.message.includes('User cancelled') ? 'Connection cancelled.' : 'Error: ' + err.message);
-      }
+    navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+      video.srcObject = stream;
+      requestAnimationFrame(detectMotion);
     });
 
-    // === BLE notification handler ===
-    function onMovement(event) {
-      const value = event.target.value.getUint8(0);
-      if (value === 1) {
-        // Debounce: restart sound if it is already playing
-        if (!soundEl.paused) {
-          soundEl.currentTime = 0;
-        }
-        soundEl.play();
-      }
-    }
+    function detectMotion() {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const currentFrame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-    function updateStatus(msg) {
-      statusEl.textContent = msg;
+      if (lastFrame) {
+        let diff = 0;
+        for (let i = 0; i < currentFrame.data.length; i += 4) {
+          const r = currentFrame.data[i];
+          const g = currentFrame.data[i + 1];
+          const b = currentFrame.data[i + 2];
+          const gray = (r + g + b) / 3;
+
+          const r2 = lastFrame.data[i];
+          const g2 = lastFrame.data[i + 1];
+          const b2 = lastFrame.data[i + 2];
+          const gray2 = (r2 + g2 + b2) / 3;
+
+          diff += Math.abs(gray - gray2);
+        }
+
+        if (diff > 1500000) { // threshold depends on lighting and size
+          console.log('Motion detected');
+          audio.play();
+        }
+      }
+
+      lastFrame = currentFrame;
+      requestAnimationFrame(detectMotion);
     }
   </script>
 </body>
